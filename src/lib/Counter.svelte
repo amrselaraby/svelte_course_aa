@@ -1,10 +1,21 @@
 <script>
-  let count = 0
-  const increment = () => {
-    count += 1
+  export let initialCount;
+  export let maxCount = undefined;
+
+  console.log($$props, $$restProps);
+
+  let count = initialCount;
+
+  function increment() {
+    if (count === maxCount) return;
+    count += 1;
   }
 </script>
 
-<button on:click={increment}>
-  count is {count}
-</button>
+<button on:click={increment}>Clicks {count}</button>
+
+<style>
+  button {
+    padding: 15px;
+  }
+</style>
