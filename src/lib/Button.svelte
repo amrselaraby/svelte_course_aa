@@ -4,12 +4,12 @@
   export let bgColor = undefined;
   export let textColor = undefined;
   let isLeftHovered = false;
-  export let disabled = false;
+  // export let disabled = false;
 </script>
 
 <button
   on:click
-  {disabled}
+  {...$$restProps}
   style:background-color={bgColor}
   style:color={textColor}
   class:size-sm={size === "small"}
