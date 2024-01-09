@@ -2,47 +2,37 @@
 
 <script>
   import Button from "./Button.svelte";
-  import {
-    createEventDispatcher,
-    onDestroy,
-    onMount,
-    beforeUpdate,
-    afterUpdate,
-  } from "svelte";
-
-  onMount(() => {
-    console.log("Mounted");
-    return () => {
-      console.log("Destroyed 2");
-    };
-  });
-
-  beforeUpdate(() => {
-    if (listDiv) {
-      console.log(listDiv.offsetHeight);
-    }
-  });
+  import { createEventDispatcher, afterUpdate } from "svelte";
+  import FaRegTrashAlt from "svelte-icons/fa/FaRegTrashAlt.svelte";
   afterUpdate(() => {
-    console.log(listDiv.offsetHeight);
+    if (autoScroll) {
+      listDiv.scrollTo(0, listDivScrollHeight);
+    }
+    autoScroll = false;
   });
 
-  onDestroy(() => {
-    console.log("Destroyed");
-  });
+  export let todos = null;
+  export let error = null;
+  export let isLoading = false;
+  export let disableAdding = false;
+  export let disabledItems = null;
 
   let inputText = "";
-  let input, listDiv;
+  let input, listDiv, autoScroll, listDivScrollHeight;
+  let prevTodos = todos;
+  const dispatch = createEventDispatcher();
 
-  export let todos = [];
-  export const readOnly = "read only";
+  $: {
+    autoScroll = todos && prevTodos && todos.length > prevTodos.length;
+    prevTodos = todos;
+  }
+
   export function clearInput() {
     inputText = "";
   }
   export function focusInput() {
     input.focus();
   }
-
-  const dispatch = createEventDispatcher();
 
   function handleAddTodo() {
     const isNotCancelled = dispatch(
@@ -66,30 +56,139 @@
 </script>
 
 <div class="todo-list-wrapper">
-  <div class="todo-list" bind:this={listDiv}>
-    <ul>
-      {#each todos as { id, title, completed } (id)}
-        <li>
-          <label>
-            <input
-              type="checkbox"
-              checked={completed}
-              on:input={((event) => (event.currentTarget.checked = completed),
-              handleToggleTodo(id, !completed))}
-            />
-            {title}
-          </label>
-          <button on:click={() => handleRemoveTodo(id)}>Remove</button>
-        </li>
-      {/each}
-    </ul>
-  </div>
-
+  {#if isLoading}
+    <p>Loading....</p>
+  {:else if error}
+    <p class="state-text">{error}</p>
+  {:else if todos}
+    <div class="todo-list" bind:this={listDiv}>
+      <div bind:offsetHeight={listDivScrollHeight}>
+        {#if todos.length === 0}
+          <p class="state-text">No Todos Yet</p>
+        {:else}
+          <ul>
+            {#each todos as todo, index (todo.id)}
+              {@const { id, completed, title } = todo}
+              <li>
+                <slot {todo} {index}>
+                  <div class:completed>
+                    <label>
+                      <input
+                        disabled={disabledItems.includes(id)}
+                        type="checkbox"
+                        checked={completed}
+                        on:input={((event) =>
+                          (event.currentTarget.checked = completed),
+                        handleToggleTodo(id, !completed))}
+                      />
+                      <slot name="title">{title}</slot>
+                    </label>
+                    <button
+                      disabled={disabledItems.includes(id)}
+                      aria-label="Remove Todo: {title}"
+                      class="remove-todo-items"
+                      on:click={() => handleRemoveTodo(id)}
+                    >
+                      <span style:width="10px" style:display="inline-block">
+                        <FaRegTrashAlt />
+                      </span>
+                    </button>
+                  </div>
+                </slot>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+    </div>
+  {/if}
   <form class="add-todo-form" on:submit|preventDefault={handleAddTodo}>
-    <input bind:value={inputText} bind:this={input} />
-    <Button type="submit" disabled={!inputText}>Add</Button>
+    <input
+      disabled={disableAdding || !todos}
+      bind:value={inputText}
+      bind:this={input}
+      placeholder="New Todo"
+    />
+    <Button type="submit" disabled={!inputText || disableAdding || !todos}
+      >Add</Button
+    >
   </form>
 </div>
 
-<style>
+<style lang="scss">
+  .todo-list-wrapper {
+    background-color: #424242;
+    border: 1px solid #4b4b4b;
+    .state-text {
+      margin: 0;
+      padding: 15px;
+      text-align: center;
+    }
+    .todo-list {
+      max-height: 200px;
+      overflow: auto;
+      ul {
+        margin: 0;
+        padding: 10px;
+        list-style: none;
+        li > div {
+          margin-bottom: 5px;
+          display: flex;
+          align-items: center;
+          background-color: #303030;
+          border-radius: 5px;
+          padding: 10px;
+          position: relative;
+          label {
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: baseline;
+            padding-right: 20px;
+            input[type="checkbox"] {
+              margin: 0 10px 0 0;
+              cursor: pointer;
+            }
+          }
+          &.completed > label {
+            opacity: 0.5;
+            text-decoration: line-through;
+          }
+          .remove-todo-items {
+            border: none;
+            background: none;
+            padding: 5px;
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+            display: none;
+            :global(svg) {
+              fill: #bd1414;
+            }
+          }
+          &:hover {
+            .remove-todo-items {
+              display: block;
+            }
+          }
+        }
+      }
+    }
+    .add-todo-form {
+      padding: 15px;
+      background-color: #303030;
+      display: flex;
+      flex-wrap: wrap;
+      border-top: 1px solid #4b4b4b;
+      input {
+        flex: 1;
+        background-color: #424242;
+        border: 1px solid 4b4b4b;
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        margin-right: 10px;
+      }
+    }
+  }
 </style>
