@@ -2,7 +2,9 @@
   import TodoList from "./lib/TodoList.svelte";
   import { v4 as uuid } from "uuid";
   import { onMount, tick } from "svelte";
-
+  import { fly } from "svelte/transition";
+  import spin from "./lib/transitions/spin";
+  import fade from "./lib/transitions/fade";
   let todoList;
   let showList = true;
   let todos = null;
@@ -45,7 +47,7 @@
     }).then(async (response) => {
       if (response.ok) {
         const todo = await response.json();
-        todos = [...todos, { ...todo, id: uuid() }];
+        todos = [{ ...todo, id: uuid() }, ...todos];
 
         todoList.clearInput();
       }
@@ -79,7 +81,7 @@
     await fetch(`https://jsonplaceholder.typicode.com/todos/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
-        complete: value,
+        completed: value,
       }),
       headers: {
         "Content-type": "application/json; charset=UTF-8",
@@ -108,12 +110,13 @@
   Show/Hide List
 </label>
 {#if showList}
-  <div style:max-width="400px">
+  <div style:opacity="0.5" style:max-width="800px">
     <TodoList
       {todos}
       {error}
       {isLoading}
       {disabledItems}
+      scrollOnAdd="top"
       disableAdding={isAdding}
       bind:this={todoList}
       on:addtodo={handleAddTodo}
@@ -122,9 +125,20 @@
       let:todo
       let:index
     >
-      <svelte:fragment slot="title">{index + 1}- {todo.title}</svelte:fragment>
+      <!-- <svelte:fragment slot="title">{index + 1}- {todo.title}</svelte:fragment> -->
     </TodoList>
   </div>
+  {#if todos}
+    <p>
+      Number of todos: {#key todos.length}<span
+          style:display="inline-block"
+          in:fly|local={{ y: -10 }}
+        >
+          {todos.length}
+        </span>
+      {/key}
+    </p>
+  {/if}
 {/if}
 
 <style>
